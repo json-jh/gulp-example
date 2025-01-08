@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "finntenzor.change-case",
+    "usernamehw.errorlens",
+    "antfu.iconify",
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "ritwickdey.liveserver",
+    "pkief.material-icon-theme",
+    "vunguyentuan.vscode-postcss",
+    "csstools.postcss",
+    "sibiraj-s.vscode-scss-formatter",
+    "bradlc.vscode-tailwindcss",
+    "gruntfuggly.todo-tree"
+  ]
+}
