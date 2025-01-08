@@ -162,3 +162,7 @@ npx gulp
 ## Now you can compose web pages using `daisyui` based on `tailwindcss` in `vsocde`.
 - You can use `tailwindcss style classes`.
 - You can use `daisyui components`. And you can `customize` them.
+
+## Reference
+- 🔗 [https://daisyui.com/components/](https://daisyui.com/components/)
+- 🔗 [https://tailwindcss.com/docs/installation](https://tailwindcss.com/docs/installation)
