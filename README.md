@@ -108,7 +108,16 @@ type nul > gulpfile.js
   const build = gulp.series(gulp.parallel(styles, scripts, injectFiles));
   gulp.task('default', gulp.series(build, watchFiles));
   ```
-
+  - insert the following comment inside the `<head>` tag of your `main.handlebars` file. The automatically generated scss file will now be imported.
+  ```html
+  <!-- inject:css -->
+  <!-- endinject -->
+  ```
+  - insert the following comment at the end of the `<body>` tag in the `main.handlebars` file. The automatically generated scss file will now import it.
+  ```html
+  <!-- inject:js -->
+  <!-- endinject -->
+  ```
 ## create a `postcss.config.js` file in the project root 
 ```bash
 type nul > postcss.config.js
@@ -146,11 +155,6 @@ npx tailwindcss init
   @tailwind base;
   @tailwind components;
   @tailwind utilities;
-  ```
-- insert the following comment inside the `<head>` tag of your `main.handlebars` file. The automatically generated scss file will now be imported.
-  ```html
-  <!-- inject:css -->
-  <!-- endinject -->
   ```
 
 ## `.vscode/settings.json`
@@ -197,6 +201,8 @@ npx tailwindcss init
   └📁scss
     └ globals.scss
     └ layout.scss
+  └📁js
+    └ ...
   └📁views
     └📁components
       └ ...
