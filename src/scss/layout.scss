@@ -1,0 +1,31 @@
+.layout {
+  &.layout-header {
+    @apply flex items-center justify-center;
+    @apply min-h-16;
+    > .inner {
+      @apply flex-1 basis-full;
+      @apply flex items-center justify-center;
+      @apply shadow-lg;
+      @apply min-h-16;
+    }
+  }
+  &.layout-body {
+    @apply flex-1;
+    > .inner {
+      @apply flex-1 basis-full h-full;
+      @apply shadow-lg;
+      @apply overflow-y-auto;
+      @apply flex items-center justify-center;
+    }
+  }
+
+  &.layout-footer {
+    @apply h-16;
+    @apply sticky bottom-0;
+    > .inner {
+      @apply flex-1 basis-full h-full;
+      @apply flex items-center justify-center;
+      @apply shadow-lg;
+    }
+  }
+}
