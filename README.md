@@ -171,7 +171,7 @@ type null > gulpfile.js
   ```
 ## create a `postcss.config.js` file in the project root 
 ```bash
-type nul > postcss.config.js
+type null > postcss.config.js
 ```
 - insert content into a file
   ```javascript
