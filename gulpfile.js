@@ -10,79 +10,72 @@ const path = require('path');
 const fs = require('fs');
 const { deleteAsync } = require('del');
 
-const paths = {
-  tailwindConfigJs: 'tailwind.config.js',
-  public: 'public',
-  scss: 'src/scss/**/*.scss',
-  js: 'src/js/**/*.js',
-  handlebars: 'src/js/**/*.handlebars',
-  publicCss: 'public/css',
-  publicJs: 'public/js',
-  srcScss: 'src/scss',
-  mainHandlebars: 'src/views/layouts/main.handlebars',
-  srcViewsLayouts: './src/views/layouts'
-};
-
 function styles() {
-  return gulp.src(paths.scss)
+  return gulp.src('src/scss/**/*.scss')
     .pipe(sourcemaps.init())
     .pipe(sass().on('error', sass.logError))
-    .pipe(postcss([tailwindcss(paths.tailwindConfigJs), require('autoprefixer')]))
+    .pipe(postcss([tailwindcss('tailwind.config.js'), require('autoprefixer')]))
     .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest(paths.publicCss));
+    .pipe(gulp.dest('public/css'));
 }
 
 function scripts() {
-  return gulp.src(paths.js)
+  return gulp.src('src/js/**/*.js')
     .pipe(sourcemaps.init())
     .pipe(uglify())
     .pipe(rename({ suffix: '.min' }))
     .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest(paths.publicJs));
+    .pipe(gulp.dest('public/js'));
 }
 
 function injectFiles() {
-  const target = gulp.src(paths.mainHandlebars);
-  const sources = gulp.src([`${paths.publicJs}/*.min.js`, `${paths.publicCss}/*.css`], { read: false });
+  const target = gulp.src('src/views/layouts/main.handlebars');
+  const sources = gulp.src([
+    'public/js/**/*.min.js', 
+    'public/css/**/*.css'
+  ], { read: false });
   return target
     .pipe(inject(sources, { relative: false, ignorePath: 'public/' }))
-    .pipe(gulp.dest(paths.srcViewsLayouts));
+    .pipe(gulp.dest('./src/views/layouts'));
 }
 
-async function cleanCss(done) {
-  const publicCssFiles = fs.readdirSync(paths.publicCss).filter(file => file.endsWith('.css'));
+async function cleanFile(done) {
+  function getFiles(dir, extension) {
+    let results = [];
+    const list = fs.readdirSync(dir);
 
-  const cssFilesToDelete = publicCssFiles.map(file => {
-    return path.join(paths.publicCss, file);
-  });
+    list.forEach(file => {
+      const filePath = path.join(dir, file);
+      const stat = fs.statSync(filePath);
+      if (stat && stat.isDirectory()) {
+        results = results.concat(getFiles(filePath, extension));
+      } else if (file.endsWith(extension)) {
+        results.push(filePath);
+      }
+    });
 
-  const deletePromises = cssFilesToDelete.map(async (cssFile) => {
-    const scssFile = path.join(paths.srcScss, path.basename(cssFile.replace('.css', '.scss')));
-    if (!fs.existsSync(scssFile)) {
-      await deleteAsync(cssFile);
-      await deleteAsync(cssFile.replace('.css', '.css.map'));
-      
-    }
-  });
+    return results;
+  }
 
-  await Promise.all(deletePromises);
+  const cssFilesToDelete = getFiles('public/css', '.css');
+  const jsFilesToDelete = getFiles('public/js', '.js');
 
-  done();
-}
+  const deletePromises = [...cssFilesToDelete, ...jsFilesToDelete].map(async (file) => {
+    const extension = path.extname(file);
+    const baseFile = path.basename(file, extension);
+    let sourceFile;
 
-async function cleanJs(done) {
-  const publicJsFiles = fs.readdirSync(paths.publicJs).filter(file => file.endsWith('.min.js'));
-
-  const filesToDelete = publicJsFiles.map(file => {
-    return path.join(paths.publicJs, file);
-  });
-
-  const deletePromises = filesToDelete.map(async (file) => {
-    const syncFile = path.join(paths.srcScss, path.basename(file.replace('.min.js', '.js')));
-    if (!fs.existsSync(syncFile)) {
-      await deleteAsync(file);
-      await deleteAsync(file.replace('.min.js', '.min.js.map'));
-      
+    if (extension === '.css') {
+      sourceFile = path.join('src/scss', `${baseFile}.scss`);
+      if (!fs.existsSync(sourceFile)) {
+        await deleteAsync(file);
+        await deleteAsync(file.replace('.css', '.css.map'));
+      }
+    } else if (extension === '.js') {
+      sourceFile = path.join('src/js', `${baseFile}.js`);
+      if (!fs.existsSync(sourceFile)) {
+        await deleteAsync(file);
+      }
     }
   });
 
@@ -92,9 +85,9 @@ async function cleanJs(done) {
 }
 
 function watchFiles() {
-  gulp.watch(paths.scss, gulp.series(cleanCss, styles, injectFiles));
-  gulp.watch(paths.js, gulp.series(cleanJs, scripts, injectFiles));
+  gulp.watch('src/scss/**/*.scss', gulp.series(cleanFile, styles, injectFiles));
+  gulp.watch('src/js/**/*.js', gulp.series(cleanFile, scripts, injectFiles));
 }
 
-const build = gulp.series(gulp.parallel(styles, scripts, injectFiles, cleanCss, cleanJs));
+const build = gulp.series(gulp.parallel(styles, scripts, injectFiles, cleanFile));
 gulp.task('default', gulp.series(build, watchFiles));

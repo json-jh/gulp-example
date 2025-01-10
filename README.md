@@ -8,6 +8,7 @@ This document guides you through setting up an environment that can create web p
 - Markups can be separated/combined (componentized).
 - Has a structure that is advantageous for collaboration.
 - Files created and deleted in the `/src` folder are exactly synchronized to the `/public` folder. No need to manage them manually.
+- If you can't use react, vue, angular, this environment can be flexible in building and delivering UI/UX.
 
 ## install package manager `pnpm`
 ```bash
@@ -60,7 +61,7 @@ npx tailwindcss init
 
 ## create a `gulpfile.js` file in the project root 
 ```bash
-type nul > gulpfile.js
+type null > gulpfile.js
 ```
 - insert content into a file
   ```javascript
@@ -72,6 +73,9 @@ type nul > gulpfile.js
   const postcss = require('gulp-postcss');
   const tailwindcss = require('tailwindcss');
   const inject = require('gulp-inject');
+  const path = require('path');
+  const fs = require('fs');
+  const { deleteAsync } = require('del');
 
   function styles() {
     return gulp.src('src/scss/**/*.scss')
@@ -92,20 +96,67 @@ type nul > gulpfile.js
   }
 
   function injectFiles() {
-    const target = gulp.src('./src/views/layouts/main.handlebars');
-    const sources = gulp.src(['./public/js/*.min.js', './public/css/*.css'], { read: false });
-
+    const target = gulp.src('src/views/layouts/main.handlebars');
+    const sources = gulp.src([
+      'public/js/**/*.min.js', 
+      'public/css/**/*.css'
+    ], { read: false });
     return target
       .pipe(inject(sources, { relative: false, ignorePath: 'public/' }))
       .pipe(gulp.dest('./src/views/layouts'));
   }
 
-  function watchFiles() {
-    gulp.watch('src/scss/**/*.scss', styles);
-    gulp.watch('src/js/**/*.js', scripts);
+  async function cleanFile(done) {
+    function getFiles(dir, extension) {
+      let results = [];
+      const list = fs.readdirSync(dir);
+
+      list.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat && stat.isDirectory()) {
+          results = results.concat(getFiles(filePath, extension));
+        } else if (file.endsWith(extension)) {
+          results.push(filePath);
+        }
+      });
+
+      return results;
+    }
+
+    const cssFilesToDelete = getFiles('public/css', '.css');
+    const jsFilesToDelete = getFiles('public/js', '.js');
+
+    const deletePromises = [...cssFilesToDelete, ...jsFilesToDelete].map(async (file) => {
+      const extension = path.extname(file);
+      const baseFile = path.basename(file, extension);
+      let sourceFile;
+
+      if (extension === '.css') {
+        sourceFile = path.join('src/scss', `${baseFile}.scss`);
+        if (!fs.existsSync(sourceFile)) {
+          await deleteAsync(file);
+          await deleteAsync(file.replace('.css', '.css.map'));
+        }
+      } else if (extension === '.js') {
+        sourceFile = path.join('src/js', `${baseFile}.js`);
+        if (!fs.existsSync(sourceFile)) {
+          await deleteAsync(file);
+        }
+      }
+    });
+
+    await Promise.all(deletePromises);
+
+    done();
   }
 
-  const build = gulp.series(gulp.parallel(styles, scripts, injectFiles));
+  function watchFiles() {
+    gulp.watch('src/scss/**/*.scss', gulp.series(cleanFile, styles, injectFiles));
+    gulp.watch('src/js/**/*.js', gulp.series(cleanFile, scripts, injectFiles));
+  }
+
+  const build = gulp.series(gulp.parallel(styles, scripts, injectFiles, cleanFile));
   gulp.task('default', gulp.series(build, watchFiles));
   ```
   - insert the following comment inside the `<head>` tag of your `main.handlebars` file. The automatically generated scss file will now be imported.
@@ -165,6 +216,50 @@ npx tailwindcss init
 }
 ```
 
+## initialize express server for routing
+```bash
+type null > server.js
+```
+  ```js
+  const express = require('express');
+  const { engine } = require('express-handlebars');
+  const browserSync = require('browser-sync');
+  const path = require('path');
+
+  const server = express();
+  const bs = browserSync.create();
+
+  server.use(express.static(path.join(process.cwd(), 'public')));
+
+  server.engine('handlebars', engine());
+  server.set('view engine', 'handlebars');
+  server.set('views', path.join(process.cwd(), 'src/views'));
+
+  server.get('/', (req, res) => {
+      res.render('index', { title: 'GULP EXAMPLE' });
+  });
+  server.get('/smile', (req, res) => {
+      res.render('smile', { title: 'GULP EXAMPLE' });
+  });
+  // Keep adding paths here. The first argument to the `res.render()` function is the `handlebars` file name.
+
+  const PORT = process.env.PORT || 5001;
+  server.listen(PORT, () => {
+    console.log(`🖥️ server running on http://localhost:${PORT}`);
+    bs.init({
+        proxy: `http://localhost:${PORT}`,
+        files: ['src/**/*', 'public/**/*'],
+        port: 3000,
+        open: false,
+        notify: false
+    });
+  });
+
+  server.on('restart', () => {
+    bs.reload();
+  });
+  ```
+
 ## `.vscode/extensions.json`
 ```json
 {
@@ -221,8 +316,9 @@ npx tailwindcss init
 
 ## run gulp
 ```bash
-npx gulp
+pnpm start
 ```
+
 - preview local browser
   - when you open vscode, install all the recommended extension apps and make sure `Live Server` is installed.
   - open the `index.html` file and click the `Go Live` button on the right side of the bottom status bar in vscode. This will launch the local server in your default browser.
@@ -234,3 +330,4 @@ npx gulp
 ## Reference
 - 🔗 [https://daisyui.com/components/](https://daisyui.com/components/)
 - 🔗 [https://tailwindcss.com/docs/installation](https://tailwindcss.com/docs/installation)
+
