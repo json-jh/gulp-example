@@ -319,10 +319,6 @@ type null > server.js
 pnpm start
 ```
 
-- preview local browser
-  - when you open vscode, install all the recommended extension apps and make sure `Live Server` is installed.
-  - open the `index.html` file and click the `Go Live` button on the right side of the bottom status bar in vscode. This will launch the local server in your default browser.
-
 ## Now you can compose web pages using `daisyui` based on `tailwindcss` in `vsocde`.
 - You can use `tailwindcss style classes`.
 - You can use `daisyui components`. And you can `customize` them.
